@@ -931,11 +931,15 @@ registerViz('jar', (() => {
   const marbles = [];
   const colors = ['#ff7a59', '#5aa9e6', '#4ec196', '#ffd166', '#b88aff', '#ff7a9b', '#5acdb3', '#f78da7', '#7ec8e3'];
   let jarG, popG;
+  const traySlots = [];
+  let nextTraySlot = 0;
 
   return {
     background: 'linear-gradient(180deg, #fff7ec 0%, #ffe5b0 100%)',
     init(s) {
       marbles.length = 0;
+      traySlots.length = 0;
+      nextTraySlot = 0;
       // Jar
       jarG = svg('g', {}, s);
       // Shadow
@@ -964,7 +968,7 @@ registerViz('jar', (() => {
         const g = svg('g', { class: 'marble' }, jarG);
         svg('circle', { cx: x, cy: y, r: 22, fill: color }, g);
         svg('circle', { cx: x - 7, cy: y - 7, r: 7, fill: 'white', opacity: 0.7 }, g);
-        marbles.push({ el: g, x, y, removed: false });
+        marbles.push({ el: g, x, y, removed: false, color });
       }
 
       // Pop layer (on top of jar) for floating marbles
@@ -975,6 +979,34 @@ registerViz('jar', (() => {
       svg('circle', { cx: 440, cy: 380, r: 10, fill: '#2d2a3a' }, face);
       svg('circle', { cx: 560, cy: 380, r: 10, fill: '#2d2a3a' }, face);
       svg('path', { d: 'M 460 420 Q 500 450 540 420', stroke: '#2d2a3a', 'stroke-width': 5, fill: 'none', 'stroke-linecap': 'round' }, face);
+
+      // Collected tray — two rows of 6 below the jar
+      const trayG = svg('g', {}, s);
+      const trayLabelY = 625;
+      const row1Y = 648, row2Y = 678;
+      const slotR = 12;
+      const trayStartX = 320, traySlotSpacing = 60;
+
+      svg('text', {
+        x: 500, y: trayLabelY,
+        'text-anchor': 'middle',
+        'font-size': 20,
+        'font-family': 'sans-serif',
+        fill: '#8b5a26',
+        'font-weight': 'bold',
+      }, trayG).textContent = 'collected';
+
+      for (let i = 0; i < N; i++) {
+        const row = Math.floor(i / 6);
+        const col = i % 6;
+        const cx = trayStartX + col * traySlotSpacing + 30;
+        const cy = row === 0 ? row1Y : row2Y;
+        const slotG = svg('g', {}, trayG);
+        const outline = svg('circle', { cx, cy, r: slotR, fill: 'none', stroke: '#7a5e3a', 'stroke-width': 2 }, slotG);
+        const fill = svg('circle', { cx, cy, r: slotR, fill: 'none', opacity: 0 }, slotG);
+        const highlight = svg('circle', { cx: cx - 4, cy: cy - 4, r: 4, fill: 'white', opacity: 0 }, slotG);
+        traySlots.push({ slotG, fill, highlight, cx, cy });
+      }
     },
     render(s, progressDone, t) {
       const gone = Math.floor(progressDone * N);
@@ -985,8 +1017,9 @@ registerViz('jar', (() => {
         if (i < gone) {
           if (!m.removed) {
             m.removed = true;
-            // Animate up + fade
             animateMarbleOut(m, t);
+            fillTraySlot(nextTraySlot, m.color);
+            nextTraySlot++;
           }
         }
       }
@@ -999,11 +1032,34 @@ registerViz('jar', (() => {
     }
   };
 
+  function fillTraySlot(idx, color) {
+    if (idx >= traySlots.length) return;
+    const { slotG, fill, highlight } = traySlots[idx];
+    fill.setAttribute('fill', color);
+    fill.setAttribute('opacity', 1);
+    highlight.setAttribute('opacity', 0.7);
+
+    let start = null;
+    const duration = 300;
+    function popStep(ts) {
+      if (start === null) start = ts;
+      const p = Math.min(1, (ts - start) / duration);
+      const scale = p < 0.5
+        ? 1 + easeOutCubic(p * 2) * 0.45
+        : 1.45 - easeOutCubic((p - 0.5) * 2) * 0.45;
+      const { cx, cy } = traySlots[idx];
+      slotG.setAttribute('transform', `translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`);
+      if (p < 1) requestAnimationFrame(popStep);
+      else slotG.removeAttribute('transform');
+    }
+    requestAnimationFrame(popStep);
+  }
+
   function animateMarbleOut(m, t0) {
     const c = m.el.querySelector('circle');
     const color = c.getAttribute('fill');
     const float = svg('g', {}, popG);
-    const circ = svg('circle', { cx: m.x, cy: m.y, r: 22, fill: color }, float);
+    svg('circle', { cx: m.x, cy: m.y, r: 22, fill: color }, float);
     svg('circle', { cx: m.x - 7, cy: m.y - 7, r: 7, fill: 'white', opacity: 0.7 }, float);
     m.el.style.display = 'none';
 
