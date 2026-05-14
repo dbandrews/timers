@@ -1441,13 +1441,31 @@ registerViz('train', (() => {
 
 // ----- BUBBLES (BATH) -------------------------------------------
 registerViz('bath', (() => {
-  let waterG, bubblesG, duckG;
+  let waterG, bubblesG, duckG, rimDucksG, splashesG;
   const bubbles = [];
+  const NUM_RIM_DUCKS = 8;
+  const rimDucks = [];
+  const splashes = [];
+
+  function makeMiniDuck(parent, cx, cy, sc) {
+    const g = svg('g', { transform: `translate(${cx} ${cy}) scale(${sc})` }, parent);
+    svg('ellipse', { cx: 0, cy: 0, rx: 60, ry: 40, fill: '#ffe066' }, g);
+    svg('circle', { cx: 30, cy: -30, r: 30, fill: '#ffe066' }, g);
+    svg('path', { d: 'M 55 -28 L 75 -22 L 55 -16 Z', fill: '#ff8c42' }, g);
+    svg('circle', { cx: 38, cy: -35, r: 4, fill: '#2d2a3a' }, g);
+    svg('circle', { cx: 39, cy: -36, r: 1.5, fill: 'white' }, g);
+    svg('path', { d: 'M -50 -10 L -70 -20 L -55 0 Z', fill: '#ffe066' }, g);
+    svg('ellipse', { cx: -10, cy: 0, rx: 26, ry: 16, fill: '#ffd84a' }, g);
+    return g;
+  }
+
   return {
     background: 'linear-gradient(180deg, #d6efff 0%, #b8e0ff 100%)',
     init(s) {
       bubbles.length = 0;
-      // Tile pattern (subtle)
+      rimDucks.length = 0;
+      splashes.length = 0;
+
       for (let y = 50; y < 700; y += 80) {
         for (let x = 0; x < 1000; x += 80) {
           svg('rect', { x, y, width: 78, height: 78, fill: 'none', stroke: 'rgba(255,255,255,0.5)', 'stroke-width': 1 }, s);
@@ -1457,69 +1475,71 @@ registerViz('bath', (() => {
       // Tub
       const tub = svg('g', {}, s);
       svg('rect', { x: 100, y: 380, width: 800, height: 280, rx: 60, fill: '#fff5ec', stroke: '#dba88a', 'stroke-width': 6 }, tub);
-      // Tub feet
       svg('ellipse', { cx: 180, cy: 670, rx: 40, ry: 18, fill: '#dba88a' }, tub);
       svg('ellipse', { cx: 820, cy: 670, rx: 40, ry: 18, fill: '#dba88a' }, tub);
 
       // Water surface
       waterG = svg('g', {}, s);
       svg('rect', { x: 110, y: 450, width: 780, height: 200, rx: 50, fill: '#a7d8ff' }, waterG);
-      // Water surface ripple
       svg('path', { d: 'M 110 450 Q 200 440 300 450 T 500 450 T 700 450 T 900 450',
         stroke: 'rgba(255,255,255,0.7)', 'stroke-width': 3, fill: 'none', id: 'ripple-1' }, waterG);
       svg('path', { d: 'M 110 470 Q 220 460 350 470 T 600 470 T 900 470',
         stroke: 'rgba(255,255,255,0.5)', 'stroke-width': 2, fill: 'none', id: 'ripple-2' }, waterG);
 
+      // Splashes layer (above water, below bubbles)
+      splashesG = svg('g', {}, s);
+
       // Bubbles container
       bubblesG = svg('g', {}, s);
 
-      // Duck
+      // Big duck
       duckG = svg('g', {}, s);
       svg('ellipse', { cx: 0, cy: 0, rx: 60, ry: 40, fill: '#ffe066' }, duckG);
       svg('circle', { cx: 30, cy: -30, r: 30, fill: '#ffe066' }, duckG);
       svg('path', { d: 'M 55 -28 L 75 -22 L 55 -16 Z', fill: '#ff8c42' }, duckG);
       svg('circle', { cx: 38, cy: -35, r: 4, fill: '#2d2a3a' }, duckG);
       svg('circle', { cx: 39, cy: -36, r: 1.5, fill: 'white' }, duckG);
-      // tail
       svg('path', { d: 'M -50 -10 L -70 -20 L -55 0 Z', fill: '#ffe066' }, duckG);
-      // wing
       svg('ellipse', { cx: -10, cy: 0, rx: 26, ry: 16, fill: '#ffd84a' }, duckG);
 
-      // Seed initial bubbles
+      // Rim ducks layer — rendered on top so they're visible above tub rim
+      rimDucksG = svg('g', {}, s);
+
+      const rimY = 362;
+      const sc = 0.38;
+      for (let i = 0; i < NUM_RIM_DUCKS; i++) {
+        const rx = 180 + (i / (NUM_RIM_DUCKS - 1)) * 640;
+        const g = makeMiniDuck(rimDucksG, rx, rimY, sc);
+        rimDucks.push({ g, rimX: rx, rimY, state: 'rim', leaveT: 0 });
+      }
+
       for (let i = 0; i < 30; i++) {
         spawnBubble(true);
       }
     },
     render(s, progressDone, t) {
-      // Target bubble count goes from 40 (start) to 5 (end)
       const target = Math.round(lerp(40, 5, progressDone));
-      // Add or remove gently
       while (bubbles.length < target && Math.random() < 0.5) spawnBubble(false);
-      // Update bubbles
       const dt = 1 / 60;
       for (let i = bubbles.length - 1; i >= 0; i--) {
         const b = bubbles[i];
         b.y -= b.vy * dt;
         b.x += Math.sin(t * b.wob + b.phase) * 0.4;
-        const popY = 120 + Math.random() * 40;
         if (b.y < 200) {
-          // Pop
           b.el.remove();
           bubbles.splice(i, 1);
-          // Spawn replacement if still need bubbles
           if (bubbles.length < target) spawnBubble(false);
         } else {
           b.el.setAttribute('cx', b.x);
           b.el.setAttribute('cy', b.y);
         }
       }
-      // If over target, pop one occasionally
       if (bubbles.length > target && Math.random() < 0.05) {
         const b = bubbles.shift();
         if (b) b.el.remove();
       }
 
-      // Duck bobbing
+      // Big duck bobbing
       const dx = 500 + Math.sin(t * 0.5) * 80;
       const dy = 430 + Math.sin(t * 1.6) * 6;
       const dr = Math.sin(t * 0.8) * 4;
@@ -1530,8 +1550,68 @@ registerViz('bath', (() => {
       const r2 = s.querySelector('#ripple-2');
       if (r1) r1.setAttribute('d', wavePath(110, 450, 900, 14, t, 0));
       if (r2) r2.setAttribute('d', wavePath(110, 470, 900, 10, t * 0.7, 1));
+
+      // Rim duck departure logic — ducks leave right-to-left as progress increases
+      const ducksGone = Math.floor(progressDone * NUM_RIM_DUCKS);
+      for (let i = NUM_RIM_DUCKS - 1; i >= NUM_RIM_DUCKS - ducksGone; i--) {
+        const d = rimDucks[i];
+        if (d.state === 'rim') {
+          d.state = 'leaving';
+          d.leaveT = t;
+          spawnSplash(d.rimX, 450, t);
+        }
+      }
+
+      // Animate leaving / gone ducks
+      const PLOP_DUR = 0.9;
+      for (let i = 0; i < NUM_RIM_DUCKS; i++) {
+        const d = rimDucks[i];
+        if (d.state === 'rim') {
+          // Gentle wobble while waiting on rim
+          const wobble = Math.sin(t * 1.8 + i * 0.9) * 2;
+          d.g.setAttribute('transform', `translate(${d.rimX} ${d.rimY + wobble}) scale(0.38)`);
+          d.g.setAttribute('opacity', '1');
+        } else if (d.state === 'leaving') {
+          const elapsed = t - d.leaveT;
+          const p = clamp(elapsed / PLOP_DUR, 0, 1);
+          const ep = easeOutCubic(p);
+          // Arc: hop up then plop down into water
+          const arcX = d.rimX + ep * 30;
+          const arcY = d.rimY + ep * ep * 110 - ep * (1 - ep) * 60;
+          const sc = lerp(0.38, 0.28, ep);
+          const rot = ep * 45;
+          d.g.setAttribute('transform', `translate(${arcX} ${arcY}) scale(${sc}) rotate(${rot})`);
+          d.g.setAttribute('opacity', String(lerp(1, 0, Math.max(0, (p - 0.7) / 0.3))));
+          if (p >= 1) {
+            d.state = 'gone';
+            d.g.setAttribute('opacity', '0');
+          }
+        }
+      }
+
+      // Animate splashes
+      for (let i = splashes.length - 1; i >= 0; i--) {
+        const sp = splashes[i];
+        const elapsed = t - sp.startT;
+        const p = clamp(elapsed / 0.55, 0, 1);
+        sp.ring.setAttribute('r', String(lerp(4, 38, p)));
+        sp.ring.setAttribute('opacity', String(lerp(0.85, 0, p)));
+        sp.ring2.setAttribute('r', String(lerp(2, 22, p)));
+        sp.ring2.setAttribute('opacity', String(lerp(0.6, 0, p)));
+        if (p >= 1) {
+          sp.g.remove();
+          splashes.splice(i, 1);
+        }
+      }
     }
   };
+
+  function spawnSplash(x, y, t) {
+    const g = svg('g', {}, splashesG);
+    const ring = svg('circle', { cx: x, cy: y, r: 4, fill: 'none', stroke: '#7ec8f5', 'stroke-width': 3, opacity: 0.85 }, g);
+    const ring2 = svg('circle', { cx: x, cy: y, r: 2, fill: 'none', stroke: 'white', 'stroke-width': 2, opacity: 0.6 }, g);
+    splashes.push({ g, ring, ring2, startT: t });
+  }
 
   function wavePath(x1, y, x2, amp, t, off) {
     const pts = [`M ${x1} ${y}`];
