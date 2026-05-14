@@ -1085,10 +1085,22 @@ registerViz('jar', (() => {
 // ----- SUNSET ----------------------------------------------------
 registerViz('sunset', (() => {
   let skyG, sun, moon, starsG, hills1, hills2, sea;
+  let milestoneStarEls = [];
+  const milestonePositions = [
+    { x: 120, y: 80,  r: 6 },
+    { x: 340, y: 110, r: 5 },
+    { x: 560, y: 70,  r: 7 },
+    { x: 800, y: 95,  r: 5 },
+    { x: 200, y: 200, r: 6 },
+    { x: 460, y: 230, r: 5 },
+    { x: 650, y: 180, r: 7 },
+    { x: 900, y: 220, r: 6 },
+  ];
+  const milestoneAppearedAt = new Array(8).fill(null);
+
   return {
     background: '#0a0e2a',
     init(s) {
-      // Sky gradient defined via defs
       const defs = svg('defs', {}, s);
       const grad = svg('linearGradient', { id: 'sky-grad', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
       svg('stop', { offset: '0%', 'stop-color': '#5aa9e6', id: 'sky-stop-1' }, grad);
@@ -1096,34 +1108,38 @@ registerViz('sunset', (() => {
       svg('stop', { offset: '100%', 'stop-color': '#ffd6a5', id: 'sky-stop-3' }, grad);
       skyG = svg('rect', { x: 0, y: 0, width: 1000, height: 700, fill: 'url(#sky-grad)' }, s);
 
-      // Stars (initially hidden)
       starsG = svg('g', { opacity: 0 }, s);
-      for (let i = 0; i < 60; i++) {
-        svg('circle', { cx: Math.random() * 1000, cy: Math.random() * 380, r: 1 + Math.random() * 2,
+      for (let i = 0; i < 30; i++) {
+        svg('circle', { cx: Math.random() * 1000, cy: Math.random() * 380, r: 1 + Math.random() * 1.5,
           fill: 'white', opacity: 0.6 + Math.random() * 0.4, 'data-phase': Math.random() * 6.28, class: 'sunset-star' }, starsG);
       }
 
-      // Moon (initially below horizon)
+      milestoneStarEls = [];
+      milestoneAppearedAt.fill(null);
+      for (let i = 0; i < 8; i++) {
+        const { x, y, r } = milestonePositions[i];
+        const g = svg('g', { opacity: 0, transform: `translate(${x} ${y}) scale(0)` }, s);
+        svg('circle', { cx: 0, cy: 0, r: r * 2.8, fill: 'white', opacity: 0.18 }, g);
+        svg('circle', { cx: 0, cy: 0, r: r, fill: 'white', opacity: 1,
+          'data-phase': Math.random() * 6.28, class: 'milestone-star' }, g);
+        milestoneStarEls.push(g);
+      }
+
       moon = svg('circle', { cx: 720, cy: 800, r: 60, fill: '#f5ebd6' }, s);
 
-      // Sun
       sun = svg('circle', { cx: 280, cy: 200, r: 80, fill: '#ffd84a' }, s);
-      // Reflection on water
       svg('ellipse', { cx: 280, cy: 580, rx: 60, ry: 8, fill: 'rgba(255,224,102,0.5)', id: 'sun-reflection' }, s);
 
-      // Sea (gradient)
       const grad2 = svg('linearGradient', { id: 'sea-grad', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
       svg('stop', { offset: '0%', 'stop-color': '#5aa9e6', id: 'sea-stop-1' }, grad2);
       svg('stop', { offset: '100%', 'stop-color': '#1c4778', id: 'sea-stop-2' }, grad2);
       sea = svg('rect', { x: 0, y: 540, width: 1000, height: 160, fill: 'url(#sea-grad)' }, s);
 
-      // Hills
       hills1 = svg('path', { d: 'M 0 540 Q 200 470 400 530 T 800 510 T 1000 530 L 1000 580 L 0 580 Z',
         fill: '#3a4f7a' }, s);
       hills2 = svg('path', { d: 'M 0 560 Q 250 500 500 555 T 1000 555 L 1000 600 L 0 600 Z',
         fill: '#283a5a' }, s);
 
-      // Birds
       for (let i = 0; i < 3; i++) {
         svg('path', { d: 'M 0 0 q 6 -6 12 0 m 0 0 q 6 -6 12 0',
           stroke: '#2a2a3a', 'stroke-width': 3, fill: 'none', 'stroke-linecap': 'round',
@@ -1131,15 +1147,12 @@ registerViz('sunset', (() => {
       }
     },
     render(s, progressDone, t) {
-      // Sun sets from y=120 to y=580 (below horizon at end)
       const sy = lerp(140, 620, easeOutCubic(progressDone));
       sun.setAttribute('cy', sy);
-      // Sun color shifts yellow → orange → red
       const sunColor = mixHex('#ffd84a', '#ff5a3a', clamp(progressDone * 1.5, 0, 1));
       sun.setAttribute('fill', sunColor);
       sun.setAttribute('opacity', clamp(1.5 - progressDone, 0, 1));
 
-      // Reflection mirror
       const refl = s.querySelector('#sun-reflection');
       if (refl) {
         refl.setAttribute('opacity', clamp(0.3 + progressDone * 0.5, 0, 0.7));
@@ -1147,7 +1160,6 @@ registerViz('sunset', (() => {
         refl.setAttribute('rx', 40 + Math.sin(t * 2) * 6);
       }
 
-      // Sky stops shift
       const s1 = s.querySelector('#sky-stop-1');
       const s2 = s.querySelector('#sky-stop-2');
       const s3 = s.querySelector('#sky-stop-3');
@@ -1156,24 +1168,51 @@ registerViz('sunset', (() => {
       s2.setAttribute('stop-color', mixHex('#a7c9e8', '#a04060', e));
       s3.setAttribute('stop-color', mixHex('#ffd6a5', '#5a2e6e', e));
 
-      // Sea darkens
       const se1 = s.querySelector('#sea-stop-1');
       const se2 = s.querySelector('#sea-stop-2');
       se1.setAttribute('stop-color', mixHex('#5aa9e6', '#2a1f4a', e));
       se2.setAttribute('stop-color', mixHex('#1c4778', '#0a0e2a', e));
 
-      // Stars fade in after halfway
-      starsG.setAttribute('opacity', clamp((progressDone - 0.4) * 2, 0, 1));
+      const firstThresh = 1 / 8;
+      starsG.setAttribute('opacity', clamp((progressDone - firstThresh) * 3, 0, 0.7));
       s.querySelectorAll('.sunset-star').forEach((c) => {
         const phase = parseFloat(c.dataset.phase);
-        c.setAttribute('opacity', 0.4 + 0.5 * Math.sin(t * 2 + phase));
+        c.setAttribute('opacity', 0.3 + 0.4 * Math.sin(t * 2 + phase));
       });
 
-      // Moon rises near the end
+      for (let i = 0; i < 8; i++) {
+        const thresh = (i + 1) / 8;
+        const el = milestoneStarEls[i];
+        if (progressDone >= thresh) {
+          if (milestoneAppearedAt[i] === null) milestoneAppearedAt[i] = t;
+          const age = t - milestoneAppearedAt[i];
+          let scale;
+          if (age < 0.25) {
+            scale = lerp(0, 1.2, age / 0.25);
+          } else if (age < 0.5) {
+            scale = lerp(1.2, 1.0, (age - 0.25) / 0.25);
+          } else {
+            scale = 1.0;
+          }
+          const { x, y } = milestonePositions[i];
+          el.setAttribute('transform', `translate(${x} ${y}) scale(${scale})`);
+          el.setAttribute('opacity', 1);
+          const inner = el.querySelector('.milestone-star');
+          if (inner) {
+            const phase = parseFloat(inner.dataset.phase);
+            inner.setAttribute('opacity', 0.75 + 0.25 * Math.sin(t * 1.8 + phase));
+          }
+        } else {
+          const { x, y } = milestonePositions[i];
+          el.setAttribute('transform', `translate(${x} ${y}) scale(0)`);
+          el.setAttribute('opacity', 0);
+          milestoneAppearedAt[i] = null;
+        }
+      }
+
       const my = lerp(800, 130, clamp((progressDone - 0.5) * 2, 0, 1));
       moon.setAttribute('cy', my);
 
-      // Birds drift
       s.querySelectorAll('.sunset-bird').forEach((b) => {
         const i = parseInt(b.dataset.i, 10);
         const bx = ((t * 18 + i * 260) % 1100) - 50;
