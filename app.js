@@ -250,6 +250,13 @@ registerViz('pizza', (() => {
   const N = 8;
   let pepperoniData = [];
 
+  let biteLayer = null;
+  let biteSliceIdx = -1;
+  const biteEls = [];
+  const bitePlayed = [false, false, false];
+  const BITE_THRESHOLDS = [0.25, 0.5, 0.75];
+  const BITE_R = 30;
+
   function makePepperoni(sliceIdx) {
     const angle = (sliceIdx + 0.5) * (2 * Math.PI / N) - Math.PI / 2;
     const pts = [];
@@ -263,20 +270,47 @@ registerViz('pizza', (() => {
     return pts;
   }
 
+  function biteCenter(sliceIdx, biteN) {
+    const sliceArc = 2 * Math.PI / N;
+    const a1 = sliceIdx * sliceArc - Math.PI / 2;
+    const frac = (biteN + 1) / (BITE_THRESHOLDS.length + 1);
+    const angle = a1 + frac * sliceArc;
+    const bx = cx + R * Math.cos(angle);
+    const by = cy + R * Math.sin(angle);
+    return { bx, by };
+  }
+
+  function rebuildBiteLayer(s, sliceIdx) {
+    if (biteLayer) biteLayer.remove();
+    biteEls.length = 0;
+    for (let b = 0; b < bitePlayed.length; b++) bitePlayed[b] = false;
+    biteLayer = svg('g', { class: 'pizza-bites' }, s);
+    for (let b = 0; b < BITE_THRESHOLDS.length; b++) {
+      const { bx, by } = biteCenter(sliceIdx, b);
+      const el = svg('circle', {
+        cx: bx, cy: by, r: 0,
+        fill: '#f5e6d3'
+      }, biteLayer);
+      biteEls.push(el);
+    }
+    biteSliceIdx = sliceIdx;
+  }
+
   return {
     background: 'radial-gradient(circle at 50% 40%, #fff5dd 0%, #ffe5b0 100%)',
     init(s) {
       slices.length = 0;
+      biteLayer = null;
+      biteSliceIdx = -1;
+      biteEls.length = 0;
+      for (let b = 0; b < bitePlayed.length; b++) bitePlayed[b] = false;
       pepperoniData = Array.from({ length: N }, (_, i) => makePepperoni(i));
 
-      // Background dish (plate)
       svg('circle', { cx, cy, r: R + 30, fill: '#f5e6d3', stroke: '#d9bf99', 'stroke-width': 4 }, s);
       svg('circle', { cx, cy, r: R + 14, fill: '#fff', opacity: 0.4 }, s);
 
-      // Crust ring (full circle)
       const crust = svg('circle', { cx, cy, r: R, fill: '#dba14a', stroke: '#b87b2a', 'stroke-width': 5 }, s);
 
-      // Slice group
       const sliceGroup = svg('g', { id: 'pizza-slices' }, s);
 
       for (let i = 0; i < N; i++) {
@@ -300,17 +334,14 @@ registerViz('pizza', (() => {
           d: `M ${cx},${cy} L ${x1i},${y1i} A ${innerR},${innerR} 0 0 1 ${x2i},${y2i} Z`,
           fill: '#ffe18a'
         }, sliceG);
-        // pepperonis
         pepperoniData[i].forEach((p) => {
           svg('circle', { cx: p.x, cy: p.y, r: p.r, fill: '#c93b1d' }, sliceG);
           svg('circle', { cx: p.x - p.r * 0.25, cy: p.y - p.r * 0.25, r: p.r * 0.3, fill: '#e85a3a', opacity: 0.7 }, sliceG);
         });
-        // crust divider line
         svg('line', { x1: cx, y1: cy, x2: x1, y2: y1, stroke: '#cf8838', 'stroke-width': 2, opacity: 0.5 }, sliceG);
         slices.push(sliceG);
       }
 
-      // Steam wisps (decorative)
       for (let i = 0; i < 3; i++) {
         svg('path', {
           d: 'M 0 0 q 8 -20 0 -40 q -8 -20 0 -40',
@@ -326,13 +357,20 @@ registerViz('pizza', (() => {
     },
     render(s, progressDone, t) {
       const slicesGone = Math.floor(progressDone * N);
-      const sliceProgress = (progressDone * N) - slicesGone; // 0..1 within current slice
+      const sliceProgress = (progressDone * N) - slicesGone;
+
+      if (slicesGone < N && slicesGone !== biteSliceIdx) {
+        rebuildBiteLayer(s, slicesGone);
+      }
+      if (slicesGone >= N && biteLayer) {
+        biteLayer.style.display = 'none';
+      }
+
       for (let i = 0; i < N; i++) {
         const el = slices[i];
         if (i < slicesGone) {
           el.style.display = 'none';
         } else if (i === slicesGone && slicesGone < N) {
-          // Wobble + fade
           const wob = Math.sin(t * 6) * (sliceProgress > 0.85 ? 6 : 1.5);
           const fade = sliceProgress > 0.9 ? 1 - (sliceProgress - 0.9) / 0.1 : 1;
           const scale = sliceProgress > 0.9 ? 1 - (sliceProgress - 0.9) * 1.0 : 1;
@@ -345,7 +383,32 @@ registerViz('pizza', (() => {
           el.setAttribute('opacity', 1);
         }
       }
-      // Steam wiggle
+
+      if (biteLayer && slicesGone < N) {
+        const wob = Math.sin(t * 6) * (sliceProgress > 0.85 ? 6 : 1.5);
+        const fade = sliceProgress > 0.9 ? 1 - (sliceProgress - 0.9) / 0.1 : 1;
+        const scale = sliceProgress > 0.9 ? 1 - (sliceProgress - 0.9) * 1.0 : 1;
+        biteLayer.setAttribute('transform', `rotate(${wob} ${cx} ${cy}) translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`);
+        biteLayer.setAttribute('opacity', fade);
+
+        for (let b = 0; b < BITE_THRESHOLDS.length; b++) {
+          const thresh = BITE_THRESHOLDS[b];
+          const biteEl = biteEls[b];
+          if (sliceProgress >= thresh) {
+            const popWindow = 0.08;
+            const localT = clamp((sliceProgress - thresh) / popWindow, 0, 1);
+            const popScale = easeOutCubic(localT);
+            biteEl.setAttribute('r', BITE_R * popScale);
+            if (!bitePlayed[b]) {
+              bitePlayed[b] = true;
+              playTone(600 + b * 120, 0.07, 'sine', 0.07);
+            }
+          } else {
+            biteEl.setAttribute('r', 0);
+          }
+        }
+      }
+
       s.querySelectorAll('.steam').forEach((el) => {
         const i = parseInt(el.dataset.i, 10);
         const phase = t + i * 1.3;
