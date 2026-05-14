@@ -425,9 +425,31 @@ registerViz('pizza', (() => {
 registerViz('balloon', (() => {
   let balloonG, stringPath, cloudGroup;
   const cx = 500, cy = 340;
+
+  const DOT_COUNT = 5;
+  // Dot positions on balloon body, avoiding the face area (face is ~y -40..+60, x -70..+70)
+  const DOT_POSITIONS = [
+    { x: -75, y: -70 },
+    { x:  75, y: -70 },
+    { x: -85, y:  80 },
+    { x:  85, y:  80 },
+    { x:   0, y: 110 },
+  ];
+  const DOT_COLORS = ['#ffe066', '#b2f7a0', '#a0d4ff', '#ffb3e6', '#ffd1a0'];
+
+  let dotEls = [];
+  let puffEls = [];
+  let prevStep = 0;
+  let popTimes = {};
+
   return {
     background: 'linear-gradient(180deg, #b8e0ff 0%, #e0f1ff 60%, #fff7ec 100%)',
     init(s) {
+      dotEls = [];
+      puffEls = [];
+      prevStep = 0;
+      popTimes = {};
+
       // Clouds (drifting)
       cloudGroup = svg('g', {}, s);
       const clouds = [
@@ -459,6 +481,13 @@ registerViz('balloon', (() => {
       // knot
       svg('path', { d: 'M -10 160 L 0 180 L 10 160 Z', fill: '#d65a3a' }, balloonG);
 
+      // Polka dots (added before face so face renders on top)
+      for (let i = 0; i < DOT_COUNT; i++) {
+        const pos = DOT_POSITIONS[i];
+        const el = svg('circle', { cx: pos.x, cy: pos.y, r: 18, fill: DOT_COLORS[i], opacity: 1 }, balloonG);
+        dotEls.push(el);
+      }
+
       // Cute face
       svg('circle', { cx: -38, cy: -10, r: 9, fill: '#2d2a3a' }, balloonG);
       svg('circle', { cx: 38, cy: -10, r: 9, fill: '#2d2a3a' }, balloonG);
@@ -469,10 +498,47 @@ registerViz('balloon', (() => {
       svg('circle', { cx: 55, cy: 22, r: 14, fill: '#ffc4b3', opacity: 0.85 }, balloonG);
       // smile
       svg('path', { d: 'M -22 28 Q 0 50 22 28', stroke: '#2d2a3a', 'stroke-width': 5, fill: 'none', 'stroke-linecap': 'round' }, balloonG);
+
+      // Puff sparkle elements (one per dot, rendered in balloon-group coord space)
+      for (let i = 0; i < DOT_COUNT; i++) {
+        const g = svg('g', { opacity: 0 }, balloonG);
+        const pos = DOT_POSITIONS[i];
+        // 6 sparkle rays
+        for (let r = 0; r < 6; r++) {
+          const angle = (r / 6) * Math.PI * 2;
+          const x2 = pos.x + Math.cos(angle) * 32;
+          const y2 = pos.y + Math.sin(angle) * 32;
+          svg('line', { x1: pos.x, y1: pos.y, x2, y2, stroke: DOT_COLORS[i], 'stroke-width': 4, 'stroke-linecap': 'round' }, g);
+        }
+        svg('circle', { cx: pos.x, cy: pos.y, r: 22, fill: DOT_COLORS[i], opacity: 0.35 }, g);
+        puffEls.push(g);
+      }
     },
     render(s, progressDone, t) {
-      // Scale balloon down over time but keep visible
-      const scale = lerp(1, 0.3, easeOutCubic(progressDone));
+      // How many dots have popped (step boundary: 0.2, 0.4, 0.6, 0.8, 1.0)
+      const poppedCount = Math.min(DOT_COUNT, Math.floor(progressDone * DOT_COUNT));
+      const dotsRemaining = DOT_COUNT - poppedCount;
+
+      // Detect newly popped dots and fire chirp + record pop time
+      if (poppedCount > prevStep) {
+        for (let i = prevStep; i < poppedCount; i++) {
+          popTimes[i] = t;
+          // Dot index maps to popping order: dot (DOT_COUNT-1-i) pops first
+          const popIdx = DOT_COUNT - 1 - i;
+          const freq = 600 + popIdx * 120;
+          playTone(freq, 0.18, 'triangle', 0.1);
+        }
+        prevStep = poppedCount;
+      }
+
+      // Stepped balloon scale: base scale snaps at each boundary, then eases in ~0.4s
+      const POP_DURATION = 0.4;
+      const stepProgress = (poppedCount / DOT_COUNT);
+      const stepFrac = clamp((progressDone - stepProgress) * DOT_COUNT / POP_DURATION, 0, 1);
+      const targetScale = lerp(1, 0.3, stepProgress);
+      const nextScale = lerp(1, 0.3, Math.min(1, stepProgress + 1 / DOT_COUNT));
+      const scale = lerp(targetScale, nextScale, easeOutCubic(stepFrac));
+
       const bob = Math.sin(t * 1.6) * 8;
       const sway = Math.sin(t * 1.1) * 4;
       const rot = Math.sin(t * 0.9) * 3;
@@ -480,12 +546,42 @@ registerViz('balloon', (() => {
       const y = cy + bob;
       balloonG.setAttribute('transform', `translate(${x} ${y}) rotate(${rot}) scale(${scale})`);
 
-      // Color shift coral → muted purple as it shrinks (still bright!)
+      // Color shift coral → muted purple
       const hue = lerp(12, 320, progressDone);
       const sat = lerp(95, 65, progressDone);
       const light = lerp(65, 70, progressDone);
       const body = s.querySelector('#balloon-body');
       if (body) body.setAttribute('fill', `hsl(${hue} ${sat}% ${light}%)`);
+
+      // Animate dots: visible if not yet popped, pop-scale-up then hide when popped
+      const POP_ANIM = 0.35;
+      for (let i = 0; i < DOT_COUNT; i++) {
+        const dotIdx = DOT_COUNT - 1 - i;
+        const el = dotEls[dotIdx];
+        const puff = puffEls[dotIdx];
+        if (i < poppedCount) {
+          // This dot has popped
+          const elapsed = popTimes[i] !== undefined ? t - popTimes[i] : POP_ANIM + 1;
+          if (elapsed < POP_ANIM) {
+            const frac = elapsed / POP_ANIM;
+            const popScale = lerp(1, 2.2, frac);
+            const opacity = lerp(1, 0, frac);
+            const pos = DOT_POSITIONS[dotIdx];
+            el.setAttribute('transform', `translate(${pos.x} ${pos.y}) scale(${popScale}) translate(${-pos.x} ${-pos.y})`);
+            el.setAttribute('opacity', opacity);
+            // Puff sparkle grows then fades
+            puff.setAttribute('opacity', lerp(0.9, 0, frac));
+            puff.setAttribute('transform', `scale(${lerp(0.5, 1.4, frac)})`);
+          } else {
+            el.setAttribute('opacity', 0);
+            puff.setAttribute('opacity', 0);
+          }
+        } else {
+          el.setAttribute('opacity', 1);
+          el.setAttribute('transform', '');
+          puff.setAttribute('opacity', 0);
+        }
+      }
 
       // String path (curvy)
       const sx = x;
