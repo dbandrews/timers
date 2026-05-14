@@ -766,11 +766,24 @@ registerViz('garden', (() => {
 registerViz('rocket', (() => {
   let rocket, trail, stars, moon, earth;
   const trailPts = [];
+
+  const CHECKPOINT_COLORS = ['#ffd166', '#4ec196', '#5aa9e6', '#b88aff', '#ff7a9b', '#ff7a59'];
+  const checkpoints = [];
+
+  function pathPos(frac) {
+    const p = easeOutCubic(frac);
+    return {
+      x: lerp(100, 850, p),
+      y: lerp(580, 130, p) - Math.sin(frac * Math.PI) * 80
+    };
+  }
+
   return {
     background: 'linear-gradient(180deg, #0a0e2a 0%, #2a1b5a 60%, #5a3a8a 100%)',
     init(s) {
       trailPts.length = 0;
-      // Stars (random fixed positions)
+      checkpoints.length = 0;
+
       stars = [];
       for (let i = 0; i < 70; i++) {
         const x = Math.random() * 1000;
@@ -799,33 +812,38 @@ registerViz('rocket', (() => {
       svg('line', { x1: 850, y1: 30, x2: 850, y2: 90, stroke: '#888', 'stroke-width': 3 }, flagG);
       svg('path', { d: 'M 850 30 L 890 38 L 850 50 Z', fill: '#ff7a59' }, flagG);
 
-      // Trail container
+      for (let i = 0; i < 6; i++) {
+        const frac = (i + 1) / 7;
+        const pos = pathPos(frac);
+        const color = CHECKPOINT_COLORS[i];
+        const g = svg('g', { transform: `translate(${pos.x} ${pos.y})` }, s);
+        const glow = svg('circle', { cx: 0, cy: 0, r: 26, fill: color, opacity: 0 }, g);
+        const orb = svg('circle', { cx: 0, cy: 0, r: 15, fill: '#3a4a7a', opacity: 0.4, stroke: '#5a6a9a', 'stroke-width': 2 }, g);
+        const highlight = svg('circle', { cx: -4, cy: -4, r: 5, fill: 'white', opacity: 0 }, g);
+        checkpoints.push({ g, glow, orb, highlight, color, lit: false, litAt: -1 });
+      }
+
+      // Trail container drawn above checkpoints so it layers correctly
       trail = svg('g', { id: 'rocket-trail' }, s);
 
       // Rocket
       rocket = svg('g', {}, s);
-      // flame
       svg('path', { d: 'M -8 28 Q 0 80 8 28 Q 0 40 -8 28', fill: '#ffd166', id: 'flame-outer' }, rocket);
       svg('path', { d: 'M -5 28 Q 0 56 5 28 Q 0 36 -5 28', fill: '#ff7a59', id: 'flame-inner' }, rocket);
-      // body
       svg('path', { d: 'M -16 -50 Q 0 -70 16 -50 L 16 28 L -16 28 Z', fill: '#f5f5f5' }, rocket);
       svg('rect', { x: -16, y: -10, width: 32, height: 8, fill: '#ff7a59' }, rocket);
       svg('circle', { cx: 0, cy: -25, r: 8, fill: '#5aa9e6', stroke: '#2d2a3a', 'stroke-width': 2 }, rocket);
-      // fins
       svg('path', { d: 'M -16 10 L -28 28 L -16 28 Z', fill: '#ff7a59' }, rocket);
       svg('path', { d: 'M 16 10 L 28 28 L 16 28 Z', fill: '#ff7a59' }, rocket);
     },
     render(s, progressDone, t) {
-      // Path: bezier curve from (100, 580) to (850, 130)
       const p = easeOutCubic(progressDone);
       const x = lerp(100, 850, p);
       const y = lerp(580, 130, p) - Math.sin(progressDone * Math.PI) * 80;
-      // tangent angle (approx)
       const nextX = lerp(100, 850, Math.min(1, p + 0.01));
       const nextY = lerp(580, 130, Math.min(1, p + 0.01)) - Math.sin(Math.min(1, progressDone + 0.01) * Math.PI) * 80;
       const angle = Math.atan2(nextY - y, nextX - x) * 180 / Math.PI + 90;
 
-      // Flame flicker
       const flicker = 1 + Math.sin(t * 30) * 0.15;
       rocket.setAttribute('transform', `translate(${x} ${y}) rotate(${angle})`);
       const flameOuter = s.querySelector('#flame-outer');
@@ -858,6 +876,46 @@ registerViz('rocket', (() => {
       stars.forEach((c) => {
         const phase = parseFloat(c.dataset.phase);
         c.setAttribute('opacity', 0.5 + 0.4 * Math.sin(t * 2 + phase));
+      });
+
+      // Checkpoint orbs
+      checkpoints.forEach((cp, i) => {
+        const thresh = (i + 1) / 7;
+        const shouldBeLit = progressDone >= thresh;
+        if (shouldBeLit && !cp.lit) {
+          cp.lit = true;
+          cp.litAt = t;
+          playTone(440 + i * 80, 0.18, 'sine', 0.25);
+        }
+        if (cp.lit) {
+          const age = t - cp.litAt;
+          const popDur = 0.35;
+          let scale;
+          if (age < popDur) {
+            const pop = Math.sin((age / popDur) * Math.PI);
+            scale = 1 + pop * 0.55;
+          } else {
+            scale = 1 + Math.sin(t * 2.5 + i) * 0.08;
+          }
+          const pos = pathPos((i + 1) / 7);
+          cp.g.setAttribute('transform', `translate(${pos.x} ${pos.y}) scale(${scale})`);
+          cp.orb.setAttribute('fill', cp.color);
+          cp.orb.setAttribute('opacity', '1');
+          cp.orb.setAttribute('stroke', 'white');
+          cp.orb.setAttribute('stroke-width', '2.5');
+          const glowPulse = 0.18 + Math.sin(t * 2.5 + i) * 0.07;
+          cp.glow.setAttribute('opacity', glowPulse);
+          cp.highlight.setAttribute('opacity', '0.7');
+        } else {
+          const pos = pathPos((i + 1) / 7);
+          cp.g.setAttribute('transform', `translate(${pos.x} ${pos.y})`);
+          cp.orb.setAttribute('fill', '#3a4a7a');
+          cp.orb.setAttribute('opacity', '0.4');
+          cp.orb.setAttribute('stroke', '#5a6a9a');
+          cp.orb.setAttribute('stroke-width', '2');
+          cp.glow.setAttribute('opacity', '0');
+          cp.highlight.setAttribute('opacity', '0');
+        }
       });
 
       // Show flag near the end
