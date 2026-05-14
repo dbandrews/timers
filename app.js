@@ -1228,10 +1228,22 @@ registerViz('sunset', (() => {
 registerViz('train', (() => {
   let trainG, smokeG, treesG, sunG;
   const smokePuffs = [];
+
+  const SIGN_XS = [100, 250, 400, 550, 700, 850];
+  const SIGN_COLORS = ['#e74c3c', '#f39c12', '#2ecc71', '#3498db', '#9b59b6', '#e91e63'];
+  const SIGN_THRESHOLDS = SIGN_XS.map(x => (x + 200 - 60) / 1300);
+  const signLamps = [];
+  const signLit = [];
+  let popScales = [];
+
   return {
     background: 'linear-gradient(180deg, #b8e0ff 0%, #e6f6da 70%, #a6d785 100%)',
     init(s) {
       smokePuffs.length = 0;
+      signLamps.length = 0;
+      signLit.length = 0;
+      popScales.length = 0;
+
       // Sun
       sunG = svg('circle', { cx: 820, cy: 150, r: 50, fill: '#ffd84a' }, s);
       svg('circle', { cx: 820, cy: 150, r: 80, fill: '#ffe066', opacity: 0.3 }, s);
@@ -1262,6 +1274,26 @@ registerViz('train', (() => {
       svg('rect', { x: 0, y: 560, width: 1000, height: 8, fill: '#7a5e3a' }, s);
       for (let x = 0; x < 1000; x += 40) {
         svg('rect', { x, y: 548, width: 24, height: 14, fill: '#5e4628' }, s);
+      }
+
+      // Station signs — fixed to SVG, not in scrolling group
+      for (let i = 0; i < SIGN_XS.length; i++) {
+        const sx = SIGN_XS[i];
+        const baseY = 510;
+        const g = svg('g', {}, s);
+        // base shadow
+        svg('ellipse', { cx: sx, cy: 542, rx: 10, ry: 3, fill: 'rgba(0,0,0,0.18)' }, g);
+        // wooden post
+        svg('rect', { x: sx - 4, y: baseY, width: 8, height: 34, rx: 2, fill: '#8b6340' }, g);
+        // post cap
+        svg('rect', { x: sx - 6, y: baseY - 2, width: 12, height: 5, rx: 2, fill: '#6b4820' }, g);
+        // lamp housing (outer ring, always visible)
+        svg('circle', { cx: sx, cy: baseY - 12, r: 13, fill: '#555' }, g);
+        // lamp glow (the color part that changes)
+        const lamp = svg('circle', { cx: sx, cy: baseY - 12, r: 10, fill: '#888', opacity: 0.4 }, g);
+        signLamps.push(lamp);
+        signLit.push(false);
+        popScales.push(1);
       }
 
       // Trees (foreground, scrolling)
@@ -1335,6 +1367,36 @@ registerViz('train', (() => {
       // Tiny bob
       const bob = Math.sin(t * 6) * 1.5;
       trainG.setAttribute('transform', `translate(${tx} ${ty + bob})`);
+
+      // Station sign lighting — cowcatcher leading edge is tx + 60
+      const leadX = tx + 60;
+      for (let i = 0; i < signLamps.length; i++) {
+        const nowLit = leadX >= SIGN_XS[i];
+        if (nowLit && !signLit[i]) {
+          signLit[i] = true;
+          popScales[i] = 1.8;
+          playTone(400 + i * 80, 0.18, 'sine', 0.18);
+        }
+        if (!nowLit && signLit[i]) {
+          signLit[i] = false;
+          popScales[i] = 1;
+        }
+        if (popScales[i] > 1) {
+          popScales[i] = Math.max(1, popScales[i] - 0.06);
+        }
+        const sc = popScales[i];
+        const cx = SIGN_XS[i];
+        const cy = 498;
+        if (signLit[i]) {
+          signLamps[i].setAttribute('fill', SIGN_COLORS[i]);
+          signLamps[i].setAttribute('opacity', '1');
+          signLamps[i].setAttribute('transform', `translate(${cx} ${cy}) scale(${sc}) translate(${-cx} ${-cy})`);
+        } else {
+          signLamps[i].setAttribute('fill', '#888');
+          signLamps[i].setAttribute('opacity', '0.35');
+          signLamps[i].setAttribute('transform', '');
+        }
+      }
 
       // Emit smoke puffs
       if (Math.random() < 0.5 && progressDone < 1) {
