@@ -253,6 +253,20 @@ h1, h2, h3, .display-font {
   box-shadow: 14px 4px 0 -2px white, 26px -4px 0 0 white, 8px 16px 0 -3px white, 30px 14px 0 -1px white;
 }
 
+.rainbow-thumb {
+  background:
+    radial-gradient(circle at 50% 50%, #fff7ec 0 14px,
+      #b88aff 14px 19px,
+      #5a4cb0 19px 24px,
+      #5aa9e6 24px 29px,
+      #5fa75a 29px 34px,
+      #ffd166 34px 39px,
+      #ff9a4d 39px 44px,
+      #ff5a5a 44px 49px,
+      transparent 49px),
+    linear-gradient(180deg, #f7e3ff 0%, #ffe9f4 100%);
+}
+
 /* Setup controls --------------------------------------------- */
 .setup-controls {
   display: flex;
@@ -262,7 +276,12 @@ h1, h2, h3, .display-font {
   padding: 4px 8px;
   flex-wrap: wrap;
 }
-.sound-toggle {
+.toggle-group {
+  display: flex;
+  gap: 14px 22px;
+  flex-wrap: wrap;
+}
+.toggle-pill {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -270,7 +289,7 @@ h1, h2, h3, .display-font {
   font-size: 16px;
   cursor: pointer;
 }
-.sound-toggle input { width: 22px; height: 22px; accent-color: var(--coral); cursor: pointer; }
+.toggle-pill input { width: 22px; height: 22px; accent-color: var(--coral); cursor: pointer; }
 
 .start-btn {
   background: var(--coral);
@@ -398,5 +417,16 @@ h1, h2, h3, .display-font {
   .viz-card { font-size: 13px; padding: 10px 4px 8px; }
   .start-btn { font-size: 24px; padding: 16px 36px; width: 100%; margin-left: 0; }
   .setup-controls { flex-direction: column-reverse; align-items: stretch; }
-  .sound-toggle { justify-content: center; }
+  .toggle-group { justify-content: center; gap: 10px 22px; }
+  .toggle-pill { justify-content: center; }
+  .run-controls { padding: 12px 14px 16px; }
+  .ctrl-btn { font-size: 18px; padding: 11px 22px; }
+  .time-readout { font-size: 26px; }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  #setup-screen { padding: 14px 20px 22px; gap: 14px; }
+  .panel { padding: 14px 16px 16px; }
+  .panel-title { margin-bottom: 10px; }
+  .start-btn { padding: 14px 40px; font-size: 24px; }
 }

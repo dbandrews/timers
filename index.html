@@ -75,14 +75,24 @@
         <div class="viz-thumb bath-thumb"></div>
         <span>Bubbles</span>
       </button>
+      <button class="viz-card" data-viz="rainbow">
+        <div class="viz-thumb rainbow-thumb"></div>
+        <span>Rainbow</span>
+      </button>
     </div>
   </section>
 
   <div class="setup-controls">
-    <label class="sound-toggle">
-      <input type="checkbox" id="sound-toggle" checked>
-      <span>Sound on</span>
-    </label>
+    <div class="toggle-group">
+      <label class="toggle-pill">
+        <input type="checkbox" id="sound-toggle" checked>
+        <span>Sound on</span>
+      </label>
+      <label class="toggle-pill">
+        <input type="checkbox" id="awake-toggle" checked>
+        <span>Keep screen on</span>
+      </label>
+    </div>
     <button id="start-btn" class="start-btn">Start</button>
   </div>
 </main>

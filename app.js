@@ -32,7 +32,24 @@ const state = {
   running: false,
   done: false,
   soundOn: true,
+  keepAwake: true,
 };
+
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem('toddler-timer-prefs') || '{}');
+    if (typeof p.soundOn === 'boolean') state.soundOn = p.soundOn;
+    if (typeof p.keepAwake === 'boolean') state.keepAwake = p.keepAwake;
+  } catch { /* no-op */ }
+}
+function savePrefs() {
+  try {
+    localStorage.setItem('toddler-timer-prefs', JSON.stringify({
+      soundOn: state.soundOn,
+      keepAwake: state.keepAwake,
+    }));
+  } catch { /* no-op */ }
+}
 
 let currentViz = null;
 let wakeLock = null;
@@ -88,7 +105,7 @@ function releaseWakeLock() {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
 }
 document.addEventListener('visibilitychange', () => {
-  if (state.running && document.visibilityState === 'visible') acquireWakeLock();
+  if (state.running && state.keepAwake && document.visibilityState === 'visible') acquireWakeLock();
 });
 
 // ----- Setup screen ---------------------------------------------
@@ -117,8 +134,19 @@ function setupScreenInit() {
       playSelectTick();
     });
   });
-  $('#sound-toggle').addEventListener('change', (e) => {
+  const soundEl = $('#sound-toggle');
+  const awakeEl = $('#awake-toggle');
+  soundEl.checked = state.soundOn;
+  awakeEl.checked = state.keepAwake;
+  soundEl.addEventListener('change', (e) => {
     state.soundOn = e.target.checked;
+    savePrefs();
+  });
+  awakeEl.addEventListener('change', (e) => {
+    state.keepAwake = e.target.checked;
+    if (!state.keepAwake) releaseWakeLock();
+    else if (state.running) acquireWakeLock();
+    savePrefs();
   });
   $('#start-btn').addEventListener('click', startTimer);
   $('#pause-btn').addEventListener('click', togglePause);
@@ -139,7 +167,7 @@ function startTimer() {
   $('#done-overlay').classList.remove('visible');
   $('#pause-btn').textContent = 'Pause';
   loadViz(state.vizId);
-  acquireWakeLock();
+  if (state.keepAwake) acquireWakeLock();
 }
 
 function togglePause() {
@@ -1111,6 +1139,116 @@ registerViz('bath', (() => {
   }
 })());
 
+// ----- RAINBOW ---------------------------------------------------
+registerViz('rainbow', (() => {
+  const cx = 500, cy = 350;
+  const colors = ['#ff4757', '#ff9a3c', '#ffd84a', '#5fcf83', '#5aa9e6', '#7a6cd6', '#b88aff'];
+  const radii = [280, 248, 216, 184, 152, 120, 88];
+  const STROKE_WIDTH = 28;
+  let rings = [];
+  let sun, sparkleG, cloudA, cloudB;
+  const sparkles = [];
+
+  function makeSparkle(parent, x, y, size) {
+    const g = svg('g', { class: 'rainbow-sparkle', transform: `translate(${x} ${y})` }, parent);
+    const d = `M 0 ${-size} L ${size * 0.28} ${-size * 0.28} L ${size} 0 L ${size * 0.28} ${size * 0.28} L 0 ${size} L ${-size * 0.28} ${size * 0.28} L ${-size} 0 L ${-size * 0.28} ${-size * 0.28} Z`;
+    svg('path', { d, fill: '#ffffff' }, g);
+    return g;
+  }
+
+  return {
+    background: 'linear-gradient(180deg, #f0e6ff 0%, #ffe6f3 60%, #fff7ec 100%)',
+    init(s) {
+      rings = [];
+      sparkles.length = 0;
+
+      // Soft fluffy clouds at base
+      cloudA = svg('g', {}, s);
+      svg('ellipse', { cx: 200, cy: 600, rx: 140, ry: 44, fill: 'rgba(255,255,255,0.9)' }, cloudA);
+      svg('ellipse', { cx: 140, cy: 590, rx: 70, ry: 36, fill: 'rgba(255,255,255,0.9)' }, cloudA);
+      svg('ellipse', { cx: 260, cy: 590, rx: 70, ry: 36, fill: 'rgba(255,255,255,0.9)' }, cloudA);
+
+      cloudB = svg('g', {}, s);
+      svg('ellipse', { cx: 800, cy: 620, rx: 160, ry: 48, fill: 'rgba(255,255,255,0.95)' }, cloudB);
+      svg('ellipse', { cx: 740, cy: 608, rx: 80, ry: 38, fill: 'rgba(255,255,255,0.95)' }, cloudB);
+      svg('ellipse', { cx: 860, cy: 608, rx: 80, ry: 38, fill: 'rgba(255,255,255,0.95)' }, cloudB);
+
+      // Ring group rotated so the depletion starts from 12 o'clock
+      const ringGroup = svg('g', { transform: `rotate(-90 ${cx} ${cy})` }, s);
+      for (let i = 0; i < 7; i++) {
+        const r = radii[i];
+        const circ = 2 * Math.PI * r;
+        const ring = svg('circle', {
+          cx, cy, r,
+          fill: 'none',
+          stroke: colors[i],
+          'stroke-width': STROKE_WIDTH,
+          'stroke-linecap': 'round',
+          'stroke-dasharray': `${circ} ${circ}`,
+        }, ringGroup);
+        rings.push({ el: ring, circ });
+      }
+
+      // Sun in center
+      sun = svg('g', {}, s);
+      svg('circle', { cx, cy, r: 56, fill: '#ffe066', stroke: '#ffc94a', 'stroke-width': 3 }, sun);
+      svg('circle', { cx: cx - 14, cy: cy - 6, r: 5, fill: '#2d2a3a' }, sun);
+      svg('circle', { cx: cx + 14, cy: cy - 6, r: 5, fill: '#2d2a3a' }, sun);
+      svg('circle', { cx: cx - 12, cy: cy - 8, r: 1.5, fill: 'white' }, sun);
+      svg('circle', { cx: cx + 16, cy: cy - 8, r: 1.5, fill: 'white' }, sun);
+      svg('path', { d: `M ${cx - 14} ${cy + 14} Q ${cx} ${cy + 28} ${cx + 14} ${cy + 14}`, stroke: '#2d2a3a', 'stroke-width': 4, fill: 'none', 'stroke-linecap': 'round' }, sun);
+      svg('circle', { cx: cx - 26, cy: cy + 14, r: 7, fill: '#ffb0a0', opacity: 0.7 }, sun);
+      svg('circle', { cx: cx + 26, cy: cy + 14, r: 7, fill: '#ffb0a0', opacity: 0.7 }, sun);
+
+      // Sparkles around the rainbow
+      sparkleG = svg('g', {}, s);
+      const positions = [
+        { x: 140, y: 180, s: 10 }, { x: 860, y: 160, s: 12 }, { x: 80, y: 360, s: 8 },
+        { x: 920, y: 380, s: 10 }, { x: 180, y: 90, s: 7 }, { x: 780, y: 90, s: 9 },
+        { x: 60, y: 220, s: 6 }, { x: 940, y: 260, s: 7 }, { x: 320, y: 50, s: 8 },
+        { x: 680, y: 50, s: 8 }, { x: 500, y: 30, s: 9 }, { x: 40, y: 480, s: 6 },
+        { x: 960, y: 500, s: 7 },
+      ];
+      positions.forEach((p) => {
+        const star = makeSparkle(sparkleG, p.x, p.y, p.s);
+        sparkles.push({ el: star, x: p.x, y: p.y, size: p.s, phase: Math.random() * 6.28 });
+      });
+    },
+    render(s, progressDone, t) {
+      // Each ring's visible arc shrinks from full circle to nothing
+      rings.forEach(({ el, circ }) => {
+        const visible = circ * (1 - progressDone);
+        if (visible < 1.5) {
+          el.style.display = 'none';
+        } else {
+          el.style.display = '';
+          el.setAttribute('stroke-dasharray', `${visible} ${circ}`);
+        }
+      });
+
+      // Sun gentle pulse + tiny float
+      const pulse = 1 + Math.sin(t * 2) * 0.04;
+      const float = Math.sin(t * 1.2) * 4;
+      sun.setAttribute('transform', `translate(0 ${float}) translate(${cx} ${cy}) scale(${pulse}) translate(${-cx} ${-cy})`);
+
+      // Sparkles twinkle and slowly rotate (transforms compose left-to-right around translated origin)
+      sparkles.forEach((sp) => {
+        const tw = 0.3 + 0.7 * Math.abs(Math.sin(t * 1.8 + sp.phase));
+        const rot = (t * 40 + sp.phase * 60) % 360;
+        const sc = 0.7 + tw * 0.5;
+        sp.el.setAttribute('opacity', tw);
+        sp.el.setAttribute('transform', `translate(${sp.x} ${sp.y}) rotate(${rot}) scale(${sc})`);
+      });
+
+      // Clouds drift slowly
+      const dxA = Math.sin(t * 0.3) * 14;
+      const dxB = Math.sin(t * 0.35 + 1.2) * 18;
+      cloudA.setAttribute('transform', `translate(${dxA} 0)`);
+      cloudB.setAttribute('transform', `translate(${dxB} 0)`);
+    }
+  };
+})());
+
 // ----- Color helpers --------------------------------------------
 function mixHex(a, b, t) {
   const pa = hexToRgb(a), pb = hexToRgb(b);
@@ -1186,5 +1324,6 @@ function confettiLoop() {
 confettiLoop();
 
 // ----- Init -----------------------------------------------------
+loadPrefs();
 setupScreenInit();
 requestAnimationFrame(tick);
