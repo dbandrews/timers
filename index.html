@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ffd6a5">
+<title>Toddler Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='44' fill='%23ffd6a5' stroke='%23ff7a59' stroke-width='6'/%3E%3Cpath d='M50 22 V50 L68 60' stroke='%23ff7a59' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<main id="setup-screen" class="screen visible">
+  <header class="setup-header">
+    <h1>How long do we wait?</h1>
+    <p class="subtitle">Pick a time, pick a friend, then press start.</p>
+  </header>
+
+  <section class="panel">
+    <h2 class="panel-title">Time</h2>
+    <div class="duration-grid" id="duration-grid">
+      <button class="duration-btn" data-seconds="30">30 sec</button>
+      <button class="duration-btn" data-seconds="60">1 min</button>
+      <button class="duration-btn" data-seconds="120">2 min</button>
+      <button class="duration-btn selected" data-seconds="300">5 min</button>
+      <button class="duration-btn" data-seconds="600">10 min</button>
+      <button class="duration-btn" data-seconds="900">15 min</button>
+      <button class="duration-btn" data-seconds="1200">20 min</button>
+      <button class="duration-btn" data-seconds="1800">30 min</button>
+    </div>
+    <div class="custom-duration">
+      <label for="custom-min">Or custom:</label>
+      <input type="number" id="custom-min" min="1" max="120" placeholder="min" inputmode="numeric">
+      <span class="custom-unit">min</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">Pick a friend</h2>
+    <div class="viz-grid" id="viz-grid">
+      <button class="viz-card selected" data-viz="pizza">
+        <div class="viz-thumb pizza-thumb"></div>
+        <span>Pizza</span>
+      </button>
+      <button class="viz-card" data-viz="balloon">
+        <div class="viz-thumb balloon-thumb"></div>
+        <span>Balloon</span>
+      </button>
+      <button class="viz-card" data-viz="garden">
+        <div class="viz-thumb garden-thumb"></div>
+        <span>Garden</span>
+      </button>
+      <button class="viz-card" data-viz="rocket">
+        <div class="viz-thumb rocket-thumb"></div>
+        <span>Rocket</span>
+      </button>
+      <button class="viz-card" data-viz="jar">
+        <div class="viz-thumb jar-thumb"></div>
+        <span>Marbles</span>
+      </button>
+      <button class="viz-card" data-viz="sunset">
+        <div class="viz-thumb sunset-thumb"></div>
+        <span>Sunset</span>
+      </button>
+      <button class="viz-card" data-viz="train">
+        <div class="viz-thumb train-thumb"></div>
+        <span>Train</span>
+      </button>
+      <button class="viz-card" data-viz="bath">
+        <div class="viz-thumb bath-thumb"></div>
+        <span>Bubbles</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="setup-controls">
+    <label class="sound-toggle">
+      <input type="checkbox" id="sound-toggle" checked>
+      <span>Sound on</span>
+    </label>
+    <button id="start-btn" class="start-btn">Start</button>
+  </div>
+</main>
+
+<!-- RUNNING / DONE SCREEN -->
+<main id="run-screen" class="screen">
+  <div class="stage" id="stage">
+    <svg id="viz-svg" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+    <div id="done-overlay" class="done-overlay">
+      <div class="done-message">All done!</div>
+      <div class="done-sub">Great waiting.</div>
+    </div>
+  </div>
+  <div class="run-controls">
+    <div class="time-readout" id="time-readout">5:00</div>
+    <div class="control-buttons">
+      <button id="pause-btn" class="ctrl-btn">Pause</button>
+      <button id="reset-btn" class="ctrl-btn ctrl-btn-secondary">Back</button>
+    </div>
+  </div>
+</main>
+
+<canvas id="confetti-canvas"></canvas>
+
+<script src="app.js"></script>
+</body>
+</html>
