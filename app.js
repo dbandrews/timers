@@ -609,6 +609,30 @@ registerViz('balloon', (() => {
 // ----- GARDEN (sun across sky) ----------------------------------
 registerViz('garden', (() => {
   let sky, sun, sunGlow, butterfly;
+  let flowerGroups = [];
+  let flowerPetals = [];
+  let flowerDisks = [];
+
+  const FLOWER_DEFS = [
+    { x: 120, color: '#ff7a9b' },
+    { x: 264, color: '#ffd166' },
+    { x: 408, color: '#b88aff' },
+    { x: 592, color: '#ff7a9b' },
+    { x: 736, color: '#fff' },
+    { x: 880, color: '#ffd166' }
+  ];
+
+  function buildSunPathD() {
+    const pts = [];
+    for (let k = 0; k <= 20; k++) {
+      const at = k / 20;
+      const px = lerp(80, 920, at);
+      const py = 380 - Math.sin(at * Math.PI) * 280;
+      pts.push(`${k === 0 ? 'M' : 'L'} ${px.toFixed(1)} ${py.toFixed(1)}`);
+    }
+    return pts.join(' ');
+  }
+
   return {
     background: 'linear-gradient(180deg, #b8e0ff 0%, #d8f0e8 60%, #a6d785 100%)',
     init(s) {
@@ -618,15 +642,17 @@ registerViz('garden', (() => {
       svg('path', { d: 'M 0 420 Q 250 320 500 420 T 1000 420 L 1000 480 L 0 480 Z', fill: '#94c1a3' }, s);
       svg('path', { d: 'M 0 460 Q 200 380 500 460 T 1000 460 L 1000 500 L 0 500 Z', fill: '#7eb389' }, s);
 
+      // Faint dotted sun-path arc
+      svg('path', { d: buildSunPathD(), stroke: 'rgba(255,255,255,0.6)', 'stroke-width': 2,
+        'stroke-dasharray': '6 10', fill: 'none', 'stroke-linecap': 'round' }, s);
+
       // Sun
       sunGlow = svg('circle', { cx: 120, cy: 460, r: 90, fill: '#ffe066', opacity: 0.35 }, s);
       sun = svg('g', {}, s);
       svg('circle', { cx: 0, cy: 0, r: 55, fill: '#ffd84a', id: 'sun-body' }, sun);
-      // smiley face
       svg('circle', { cx: -16, cy: -6, r: 5, fill: '#2d2a3a' }, sun);
       svg('circle', { cx: 16, cy: -6, r: 5, fill: '#2d2a3a' }, sun);
       svg('path', { d: 'M -14 12 Q 0 26 14 12', stroke: '#2d2a3a', 'stroke-width': 4, fill: 'none', 'stroke-linecap': 'round' }, sun);
-      // rays
       for (let i = 0; i < 12; i++) {
         const a = i * Math.PI / 6;
         const x1 = 70 * Math.cos(a), y1 = 70 * Math.sin(a);
@@ -646,23 +672,36 @@ registerViz('garden', (() => {
           stroke: '#6ea552', 'stroke-width': 2, fill: 'none' }, s);
       }
 
-      // Flowers
-      const flowers = [
-        { x: 130, color: '#ff7a9b' }, { x: 280, color: '#ffd166' }, { x: 470, color: '#b88aff' },
-        { x: 650, color: '#ff7a9b' }, { x: 820, color: '#fff' }, { x: 920, color: '#ffd166' }
-      ];
-      flowers.forEach((f, i) => {
-        const g = svg('g', { class: 'flower', 'data-i': i }, s);
-        svg('path', { d: `M ${f.x} 580 Q ${f.x - 4} 540 ${f.x} 520`, stroke: '#4a8a3a', 'stroke-width': 4, fill: 'none', 'stroke-linecap': 'round' }, g);
-        // leaves
-        svg('ellipse', { cx: f.x - 8, cy: 555, rx: 8, ry: 4, fill: '#6ea552', transform: `rotate(-30 ${f.x - 8} 555)` }, g);
-        // petals
+      // Flowers — start as closed buds, petals/disk stored for render updates
+      flowerGroups = [];
+      flowerPetals = [];
+      flowerDisks = [];
+      FLOWER_DEFS.forEach((f, i) => {
+        const g = svg('g', {}, s);
+        flowerGroups.push(g);
+
+        // Stem
+        svg('path', { d: `M ${f.x} 580 Q ${f.x - 4} 540 ${f.x} 515`, stroke: '#4a8a3a',
+          'stroke-width': 4, fill: 'none', 'stroke-linecap': 'round' }, g);
+        // Leaf
+        svg('ellipse', { cx: f.x - 8, cy: 555, rx: 8, ry: 4, fill: '#6ea552',
+          transform: `rotate(-30 ${f.x - 8} 555)` }, g);
+        // Bud tip — small green oval visible when closed
+        svg('ellipse', { cx: f.x, cy: 510, rx: 5, ry: 8, fill: '#5aaa40' }, g);
+
+        // Petals — grouped so we can scale from center with transform-origin workaround
+        const petalGroup = svg('g', { transform: `translate(${f.x} 510) scale(0)` }, g);
+        flowerPetals.push(petalGroup);
         for (let p = 0; p < 6; p++) {
           const a = p * Math.PI / 3;
-          svg('ellipse', { cx: f.x + Math.cos(a) * 14, cy: 510 + Math.sin(a) * 14, rx: 12, ry: 8, fill: f.color,
-            transform: `rotate(${(p * 60)} ${f.x + Math.cos(a) * 14} ${510 + Math.sin(a) * 14})` }, g);
+          svg('ellipse', { cx: Math.cos(a) * 14, cy: Math.sin(a) * 14, rx: 12, ry: 8, fill: f.color,
+            transform: `rotate(${p * 60} ${Math.cos(a) * 14} ${Math.sin(a) * 14})` }, petalGroup);
         }
-        svg('circle', { cx: f.x, cy: 510, r: 7, fill: '#ffd84a' }, g);
+
+        // Center disk — same scale trick
+        const disk = svg('circle', { cx: f.x, cy: 510, r: 7, fill: '#ffd84a',
+          transform: `translate(0 0) scale(0)`, 'transform-origin': `${f.x} 510` }, g);
+        flowerDisks.push(disk);
       });
 
       // Butterfly
@@ -682,10 +721,8 @@ registerViz('garden', (() => {
       }
     },
     render(s, progressDone, t) {
-      // Arc the sun across the sky
       const arcT = progressDone;
       const sx = lerp(80, 920, arcT);
-      // parabolic arc - high in middle
       const arcY = 380 - Math.sin(arcT * Math.PI) * 280;
       sun.setAttribute('transform', `translate(${sx} ${arcY}) rotate(${t * 12})`);
       sunGlow.setAttribute('cx', sx);
@@ -695,13 +732,18 @@ registerViz('garden', (() => {
       // Sky color shift: morning blue → midday → sunset
       let skyColor;
       if (arcT < 0.5) {
-        const tt = arcT * 2;
-        skyColor = mixHex('#b8e0ff', '#f6e2b4', tt);
+        skyColor = mixHex('#b8e0ff', '#f6e2b4', arcT * 2);
       } else {
-        const tt = (arcT - 0.5) * 2;
-        skyColor = mixHex('#f6e2b4', '#ffb38a', tt);
+        skyColor = mixHex('#f6e2b4', '#ffb38a', (arcT - 0.5) * 2);
       }
       sky.setAttribute('fill', skyColor);
+
+      // Bloom each flower as the sun passes overhead
+      FLOWER_DEFS.forEach((f, i) => {
+        const bloomT = easeOutCubic(clamp((progressDone - i / 6) / (1 / 6), 0, 1));
+        flowerPetals[i].setAttribute('transform', `translate(${f.x} 510) scale(${bloomT})`);
+        flowerDisks[i].setAttribute('transform', `translate(${f.x} 510) scale(${bloomT}) translate(${-f.x} -510)`);
+      });
 
       // Butterfly figure-8
       const bx = 500 + Math.sin(t * 0.8) * 280;
