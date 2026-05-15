@@ -1,18 +1,15 @@
 # Toddler Timer
 
-A single-page visual timer designed to help toddlers understand "how much time is left." Instead of numbers, time is shown through gentle, friendly animations — a pizza losing slices, a balloon shrinking, a rocket flying to the moon, a sunset, and more.
+A single-page visual timer designed to help toddlers understand "how much time is left." Each animation is a solid mass that retracts as the timer counts down — easy to read at a glance.
 
-Pick a duration, pick a friend, press start.
+Pick a duration, pick a style, press start.
 
 ## Visualizations
-- **Pizza** — 8 slices vanish one by one
-- **Balloon** — a smiling balloon slowly shrinks
-- **Garden** — the sun arcs across the sky
-- **Rocket** — a rocket flies from Earth to the Moon
-- **Marbles** — marbles drift out of a jar one at a time
-- **Sunset** — sky shifts from day to night, moon rises
-- **Train** — a train chugs across the meadow
-- **Bubbles** — bath bubbles thin out as time passes
+- **Big Bar** — horizontal bar shrinks right-to-left
+- **Juice Bar** — purple juice drains out of a glass tube with a wavy edge
+- **Clock Pie** — a pie chart slice retracts around a clock face
+- **Sun Ring** — a donut ring around a smiling sun retracts
+- **Rainbow** — seven rainbow rings vanish one-at-a-time, outer-first
 
 ## Running locally
 No build step. Just serve the folder:

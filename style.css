@@ -170,88 +170,59 @@ h1, h2, h3, .display-font {
 }
 
 /* Thumb illustrations */
-.pizza-thumb { background: radial-gradient(circle at 50% 50%, #ffd166 0%, #ffd166 55%, #c67d3f 56%, #c67d3f 60%, transparent 61%), #fff7ec; }
-.pizza-thumb::before, .pizza-thumb::after {
-  content: ''; position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #d6442c;
+.barclassic-thumb { background: linear-gradient(180deg, #fff7ec 0%, #ffe5b0 100%); }
+.barclassic-thumb::before {
+  content: ''; position: absolute; top: 50%; left: 8px; right: 8px;
+  transform: translateY(-50%);
+  height: 26px; border-radius: 13px;
+  background: #ecd9b3;
+  border: 2px solid #d6c8a8;
 }
-.pizza-thumb::before { top: 18px; left: 22px; box-shadow: 24px 6px 0 #d6442c, -2px 28px 0 #d6442c; }
-.pizza-thumb::after { top: 36px; left: 38px; box-shadow: 10px -16px 0 #d6442c; }
-
-.balloon-thumb { background: linear-gradient(180deg, #c8ecff 0%, #eaf6ff 100%); }
-.balloon-thumb::before {
-  content: ''; position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
-  width: 36px; height: 44px; border-radius: 50%; background: var(--coral);
-  box-shadow: inset -6px -6px 0 rgba(0,0,0,0.08), inset 6px 6px 0 rgba(255,255,255,0.25);
-}
-.balloon-thumb::after {
-  content: ''; position: absolute; left: 50%; top: 52px; width: 2px; height: 14px; background: var(--ink-soft);
-  transform: translateX(-50%);
+.barclassic-thumb::after {
+  content: ''; position: absolute; top: 50%; left: 10px;
+  transform: translateY(-50%);
+  width: 30px; height: 22px; border-radius: 11px 4px 4px 11px;
+  background: linear-gradient(180deg, #7ee0c8, #5aa9e6);
 }
 
-.garden-thumb { background: linear-gradient(180deg, #cfeaff 0%, #ffeaa3 60%, #a6d785 100%); }
-.garden-thumb::before {
-  content: ''; position: absolute; top: 10px; left: 12px;
-  width: 16px; height: 16px; border-radius: 50%; background: var(--sunny);
-  box-shadow: 0 0 12px var(--sunny);
+.barliquid-thumb { background: linear-gradient(180deg, #f0e6ff 0%, #ffe6f3 100%); }
+.barliquid-thumb::before {
+  content: ''; position: absolute; top: 50%; left: 8px; right: 8px;
+  transform: translateY(-50%);
+  height: 30px; border-radius: 15px;
+  background: rgba(255,255,255,0.7);
+  border: 2px solid #5a4080;
 }
-.garden-thumb::after {
-  content: ''; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-  width: 10px; height: 10px; border-radius: 50%; background: #ff7a9b;
-  box-shadow: -16px 4px 0 #b88aff, 16px 2px 0 #ffd166, -8px -10px 0 white, 12px -8px 0 white;
-}
-
-.rocket-thumb { background: linear-gradient(180deg, #1a1f4a 0%, #4a3a78 100%); }
-.rocket-thumb::before {
-  content: ''; position: absolute; top: 14px; left: 28px; width: 14px; height: 30px; border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, #f5f5f5 0%, #bcbcbc 100%);
-  box-shadow: 0 0 8px rgba(255, 200, 100, 0.6);
-}
-.rocket-thumb::after {
-  content: ''; position: absolute; bottom: 10px; left: 33px; width: 4px; height: 12px;
-  background: linear-gradient(180deg, var(--sunny), var(--coral)); border-radius: 0 0 4px 4px;
+.barliquid-thumb::after {
+  content: ''; position: absolute; top: 50%; left: 10px;
+  transform: translateY(-50%);
+  width: 32px; height: 26px; border-radius: 13px 6px 6px 13px;
+  background: linear-gradient(180deg, #b88aff, #7a4fcc);
 }
 
-.jar-thumb { background: #f8f5ed; }
-.jar-thumb::before {
-  content: ''; position: absolute; top: 12px; left: 14px; width: 42px; height: 50px;
-  border: 3px solid #8a9bab; border-radius: 6px 6px 14px 14px; background: rgba(184, 224, 255, 0.4);
+.pieclock-thumb { background: #fff7d6; }
+.pieclock-thumb::before {
+  content: ''; position: absolute; inset: 6px;
+  border-radius: 50%;
+  background: conic-gradient(from -90deg, #ff9a3c 0deg 270deg, rgba(255, 215, 165, 0.45) 270deg 360deg);
+  border: 2px solid #dba14a;
 }
-.jar-thumb::after {
-  content: ''; position: absolute; top: 32px; left: 19px; width: 8px; height: 8px; border-radius: 50%; background: var(--coral);
-  box-shadow: 12px 0 0 var(--mint-deep), 20px 8px 0 var(--plum), 4px 8px 0 var(--sunny);
-}
-
-.sunset-thumb { background: linear-gradient(180deg, #ffb38a 0%, #ff7a9b 50%, #5d4080 100%); }
-.sunset-thumb::before {
-  content: ''; position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-  width: 24px; height: 24px; border-radius: 50%; background: var(--sunny);
-  box-shadow: 0 0 14px rgba(255, 224, 102, 0.7);
-}
-.sunset-thumb::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 10px;
-  background: #3a2658; border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+.pieclock-thumb::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff4cc; border: 2px solid #a87420;
 }
 
-.train-thumb { background: linear-gradient(180deg, #cfeaff 0%, #e6f6da 70%, #b3d99c 100%); }
-.train-thumb::before {
-  content: ''; position: absolute; bottom: 14px; left: 10px; width: 28px; height: 16px;
-  background: var(--coral); border-radius: 4px 8px 0 0;
-  box-shadow: 24px 4px 0 -4px var(--mint-deep);
-}
-.train-thumb::after {
-  content: ''; position: absolute; bottom: 8px; left: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink);
-  box-shadow: 12px 0 0 var(--ink), 28px 0 0 var(--ink), 38px 0 0 var(--ink);
-}
-
-.bath-thumb { background: linear-gradient(180deg, #e8f5ff 0%, #b8e0ff 100%); }
-.bath-thumb::before {
-  content: ''; position: absolute; bottom: 10px; left: 8px; right: 8px; height: 32px;
-  background: rgba(255,255,255,0.6); border-radius: 12px;
-}
-.bath-thumb::after {
-  content: ''; position: absolute; top: 14px; left: 16px; width: 10px; height: 10px; border-radius: 50%;
-  background: rgba(255,255,255,0.85);
-  box-shadow: 14px 4px 0 -2px white, 26px -4px 0 0 white, 8px 16px 0 -3px white, 30px 14px 0 -1px white;
+.piering-thumb {
+  background:
+    radial-gradient(circle at 50% 50%,
+      #ffe066 0 14px,
+      #ffc94a 14px 16px,
+      transparent 16px 21px,
+      #ff7a9b 21px 32px,
+      transparent 32px),
+    linear-gradient(180deg, #ffe6f3 0%, #fff5ec 100%);
 }
 
 .rainbow-thumb {
