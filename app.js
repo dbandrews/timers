@@ -509,8 +509,6 @@ registerViz('rainbow', (() => {
   let rings = [];
   let sun, sparkleG, cloudA, cloudB;
   const sparkles = [];
-  let sunFlashUntil = 0;
-  const ringVanishAt = Array(7).fill(false);
 
   function makeSparkle(parent, x, y, size) {
     const g = svg('g', { class: 'rainbow-sparkle', transform: `translate(${x} ${y})` }, parent);
@@ -524,8 +522,6 @@ registerViz('rainbow', (() => {
     init(s) {
       rings = [];
       sparkles.length = 0;
-      sunFlashUntil = 0;
-      for (let i = 0; i < 7; i++) ringVanishAt[i] = false;
 
       // Soft fluffy clouds at base
       cloudA = svg('g', {}, s);
@@ -580,28 +576,17 @@ registerViz('rainbow', (() => {
       });
     },
     render(s, progressDone, t) {
-      rings.forEach(({ el, circ }, i) => {
-        const localProgress = clamp(progressDone * 7 - i, 0, 1);
-        if (localProgress >= 1) {
-          if (!ringVanishAt[i]) {
-            ringVanishAt[i] = true;
-            sunFlashUntil = t + 0.35;
-            playTone(300 + i * 80, 0.18, 'sine', 0.18);
-          }
+      rings.forEach(({ el, circ }) => {
+        const visible = circ * (1 - progressDone);
+        if (visible < 1.5) {
           el.style.display = 'none';
         } else {
           el.style.display = '';
-          if (localProgress <= 0) {
-            el.setAttribute('stroke-dasharray', `${circ} ${circ}`);
-          } else {
-            el.setAttribute('stroke-dasharray', `${circ * (1 - localProgress)} ${circ}`);
-          }
+          el.setAttribute('stroke-dasharray', `${visible} ${circ}`);
         }
       });
 
-      const flashing = t < sunFlashUntil;
-      const flashScale = flashing ? 1 + 0.22 * Math.sin((t - (sunFlashUntil - 0.35)) / 0.35 * Math.PI) : 1;
-      const pulse = flashScale * (1 + Math.sin(t * 2) * 0.04);
+      const pulse = 1 + Math.sin(t * 2) * 0.04;
       const float = Math.sin(t * 1.2) * 4;
       sun.setAttribute('transform', `translate(0 ${float}) translate(${cx} ${cy}) scale(${pulse}) translate(${-cx} ${-cy})`);
 
