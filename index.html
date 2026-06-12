@@ -66,6 +66,24 @@
     </div>
   </section>
 
+  <section class="panel" id="ai-panel">
+    <h2 class="panel-title">✨ Make a brand-new friend</h2>
+    <p class="ai-hint">Ask the robot artist to invent a timer nobody has ever seen.</p>
+    <div class="ai-row">
+      <input type="text" id="ai-theme" placeholder="Theme (optional) — dinosaurs, space, bubbles…" maxlength="120">
+      <button id="ai-generate-btn" class="ai-btn">Make it!</button>
+    </div>
+    <p id="ai-status" class="ai-status" hidden></p>
+    <details class="ai-key-details" id="ai-key-details">
+      <summary>OpenAI API key</summary>
+      <div class="ai-row">
+        <input type="password" id="ai-key" placeholder="sk-…" autocomplete="off">
+        <button id="ai-key-save" class="ai-btn ai-btn-secondary">Save</button>
+      </div>
+      <p class="ai-key-note">Stored only in this browser and sent only to api.openai.com. Don't commit a key to the repo — the site is public.</p>
+    </details>
+  </section>
+
   <div class="setup-controls">
     <div class="toggle-group">
       <label class="toggle-pill">
@@ -102,5 +120,6 @@
 <canvas id="confetti-canvas"></canvas>
 
 <script src="app.js"></script>
+<script src="ai.js"></script>
 </body>
 </html>

@@ -239,6 +239,90 @@ h1, h2, h3, .display-font {
     linear-gradient(180deg, #f7e3ff 0%, #ffe9f4 100%);
 }
 
+/* AI designer panel ------------------------------------------ */
+.ai-hint { color: var(--ink-soft); font-size: 15px; margin: -6px 0 12px; }
+
+.ai-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ai-row input {
+  flex: 1;
+  min-width: 180px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 16px;
+  padding: 12px 16px;
+  border: 3px solid rgba(184, 138, 255, 0.35);
+  border-radius: 16px;
+  background: white;
+  color: var(--ink);
+  outline: none;
+}
+.ai-row input:focus { border-color: var(--plum); }
+
+.ai-btn {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  border: none;
+  color: white;
+  background: var(--plum);
+  padding: 12px 28px;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #8d5fe0, 0 10px 20px rgba(184, 138, 255, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.ai-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #8d5fe0; }
+.ai-btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+.ai-btn-secondary {
+  background: white;
+  color: var(--ink);
+  box-shadow: 0 4px 0 rgba(45, 42, 58, 0.15);
+}
+.ai-btn-secondary:active { box-shadow: 0 2px 0 rgba(45, 42, 58, 0.15); }
+
+.ai-status {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+.ai-status-busy::after {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  vertical-align: -2px;
+  border-radius: 50%;
+  border: 3px solid var(--plum);
+  border-top-color: transparent;
+  animation: aiSpin 0.8s linear infinite;
+}
+@keyframes aiSpin { to { transform: rotate(360deg); } }
+.ai-status-error { color: var(--coral-deep); }
+.ai-status-ok { color: var(--mint-deep); }
+
+.ai-key-details { margin-top: 14px; }
+.ai-key-details summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 14px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.ai-key-details[open] summary { margin-bottom: 10px; }
+.ai-key-note { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
+
+.ai-thumb {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8) 0 6px, transparent 7px),
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.7) 0 4px, transparent 5px),
+    linear-gradient(135deg, #b88aff 0%, #ff7a9b 100%);
+}
+
 /* Setup controls --------------------------------------------- */
 .setup-controls {
   display: flex;
