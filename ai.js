@@ -12,7 +12,7 @@
 //   2. The "OpenAI API key" box on the setup screen — saved to this
 //      browser's localStorage only, never sent anywhere except api.openai.com.
 const EMBEDDED_OPENAI_API_KEY = '';
-const OPENAI_MODEL = 'gpt-5.4-mini';
+const OPENAI_MODEL = 'gpt-5.4';
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 const AI_KEY_STORE = 'toddler-timer-openai-key';
