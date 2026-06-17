@@ -30,10 +30,30 @@ return {
   render(s, progressDone, t) { /* update every frame */ }
 };
 
-How it is used:
+THE ONE RULE THAT MATTERS MOST — it must count down:
+- progressDone goes 0 when the timer STARTS to 1 when time is UP. Define remaining = 1 - progressDone (1 = full, 0 = empty).
+- ONE big solid mass must stand for "time remaining", and its visible size must be directly proportional to remaining: FULL at progressDone 0, exactly HALF at 0.5, and completely GONE at 1.
+- That mass must DRAIN / SHRINK / EMPTY OUT / VANISH piece-by-piece as time passes — never grow, never fill up, never merely change color. If your shape gets bigger or fuller as progressDone rises, it is WRONG.
+- Map it linearly and set it straight from remaining every frame. Do NOT ease or smoothly animate the size toward a target, or half the time will not look like half the mass.
+- This draining mass must be the BIGGEST, most obvious thing on screen. A toddler glancing for one second must tell "lots left" from "almost gone". A small moving dot, clock hand, or marker is NOT enough on its own.
+
+progressDone vs t — keep them in separate jobs:
+- progressDone (0→1) is the ONLY thing allowed to drive the SIZE/AMOUNT of the draining mass. Compute that mass purely from progressDone every frame.
+- t is seconds elapsed, for AMBIENT decoration ONLY — bobbing, twinkling, drifting clouds, wiggling. t must NEVER decide how much mass is left.
+- Sanity test your code against this: if you deleted every use of t, the countdown must still read perfectly. If you deleted every use of progressDone, the picture must look frozen (only idle wiggling). Many designs fail by animating with t and forgetting to consume progressDone — do not make that mistake.
+- render runs ~60 times/sec, is also called out of order (e.g. progressDone 0, then 0.5, then 1), and runs again after a reset. Derive the whole picture FRESH from (progressDone, t) each call. Keep NO frame-to-frame counters or saved positions for the countdown — it must be correct even if progressDone jumps straight to 0.9.
+
+A correct pattern (copy this discipline, not this shape):
+  let bar; const x0 = 100, full = 800, y = 290, h = 120;
+  // init: bar = svg('rect', { x: x0, y, width: full, height: h, rx: 40, fill: '#5aa9e6' }, s);
+  // render: const remaining = clamp(1 - progressDone, 0, 1);
+  //         bar.setAttribute('width', Math.max(0.01, full * remaining)); // 800 → 0, linearly
+WRONG: width = full * progressDone (fills up instead of draining); width driven by Math.sin(t) (ignores the timer entirely); only recoloring while the shape stays full size.
+
+Piece-by-piece counts too (balloons, blocks, stars, petals): show N items, and each frame hide the ones whose index < Math.ceil(N * progressDone) so the COUNT visibly drops to 0 — every piece gone at progressDone 1.
+
+How it is rendered:
 - s is an empty <svg viewBox="0 0 1000 700"> element. Draw everything inside it in init.
-- render runs ~60 times per second. progressDone goes 0 (timer starts) to 1 (time is up). t is seconds elapsed, for ambient animation.
-- The picture MUST show time remaining as one big solid mass that visibly shrinks, drains, retracts, or vanishes piece-by-piece as progressDone goes 0 to 1. A toddler must see at a glance how much is left.
 
 Rules:
 - Big bold shapes, cheerful colors, and a cute smiling face somewhere.
@@ -42,7 +62,9 @@ Rules:
 - Keep element references in closure variables declared before the return statement.
 - Draw ONLY inside s. No HTML DOM access, no document/window, no fetch, no setTimeout/setInterval/requestAnimationFrame, no external images or fonts, no CSS classes.
 - init can be called again after a reset: re-initialize any closure arrays at the top of init.
-- render must be cheap and must not throw at progressDone 0, 0.5, or 1 (e.g. guard against zero-size shapes).`;
+- render must be cheap and must not throw at progressDone 0, 0.5, or 1 (e.g. guard against zero-size shapes).
+
+Before you answer, silently verify ALL of these and fix anything that fails: (1) at progressDone 0 the mass is full, at 0.5 it is half, at 1 it is gone; (2) that size comes from progressDone, NOT from t; (3) it only ever shrinks as progressDone rises, never grows.`;
 
 // ----- Key handling ----------------------------------------------
 function getApiKey() {
@@ -122,8 +144,26 @@ function addAiVizCard(id, def, select) {
   const label = document.createElement('span');
   label.textContent = def.name || 'Mystery';
 
+  // Remove (×) control — only on AI-made cards; built-ins can't be deleted.
+  const del = document.createElement('span');
+  del.className = 'ai-del';
+  del.textContent = '×';
+  del.setAttribute('role', 'button');
+  del.setAttribute('tabindex', '0');
+  del.setAttribute('aria-label', `Remove ${def.name || 'this design'}`);
+  const onDelete = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    deleteSavedDesign(id);
+  };
+  del.addEventListener('click', onDelete);
+  del.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') onDelete(e);
+  });
+
   card.appendChild(thumb);
   card.appendChild(label);
+  card.appendChild(del);
   card.addEventListener('click', () => {
     $$('.viz-card').forEach((c) => c.classList.remove('selected'));
     card.classList.add('selected');
@@ -144,6 +184,23 @@ function removeVizCard(id) {
   const card = document.querySelector(`.viz-card[data-viz="${id}"]`);
   if (card) card.remove();
   delete vizRegistry[id];
+}
+
+// User-initiated delete: drop the card + registry entry, forget it in
+// localStorage, and re-select a default if the removed design was active.
+function deleteSavedDesign(id) {
+  const wasSelected = state.vizId === id;
+  removeVizCard(id);
+  saveDesigns(loadSavedDesigns().filter((d) => d.id !== id));
+  if (wasSelected) {
+    const fallback = $('.viz-card');
+    if (fallback) {
+      $$('.viz-card').forEach((c) => c.classList.remove('selected'));
+      fallback.classList.add('selected');
+      state.vizId = fallback.dataset.viz;
+    }
+  }
+  playSelectTick();
 }
 
 // ----- Generation flow -------------------------------------------

@@ -12,7 +12,7 @@ Pick a duration, pick a style, press start.
 - **Rainbow** — seven rainbow rings vanish one-at-a-time, outer-first
 
 ## AI timer designer
-The "Make a brand-new friend" panel asks an LLM (OpenAI, `gpt-5.4`) to invent a never-before-seen timer visualization on the spot — optionally around a theme like "dinosaurs". Generated designs appear as new cards, are smoke-tested before they're accepted, and the last 6 are kept in `localStorage`.
+The "Make a brand-new friend" panel asks an LLM (OpenAI, `gpt-5.4`) to invent a never-before-seen timer visualization on the spot — optionally around a theme like "dinosaurs". Generated designs appear as new cards, are smoke-tested before they're accepted, and the last 6 are kept in `localStorage`. Tap the **×** in the corner of a generated card to remove it.
 
 It needs an OpenAI API key. Paste it into the **OpenAI API key** box on the page — it's stored only in your browser's `localStorage` and sent only to `api.openai.com`. Do **not** commit a key to this repo: GitHub Pages is public and OpenAI revokes leaked keys. (For a private deployment you can hardcode one in `EMBEDDED_OPENAI_API_KEY` at the top of `ai.js`.)
 
